@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lean Editor Test Page</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 20px;
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .panel {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .panel h2 {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #333;
+            border-bottom: 2px solid #007acc;
+            padding-bottom: 8px;
+        }
+
+        .problem-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .problem-card {
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .problem-card:hover {
+            border-color: #007acc;
+            background: #f8f9fa;
+        }
+
+        .problem-card.selected {
+            border-color: #007acc;
+            background: #e7f3ff;
+        }
+
+        .problem-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .problem-desc {
+            font-size: 13px;
+            color: #666;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        button {
+            background: #007acc;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #005a9e;
+        }
+
+        button.secondary {
+            background: #6c757d;
+        }
+
+        button.secondary:hover {
+            background: #545b62;
+        }
+
+        button.danger {
+            background: #dc3545;
+        }
+
+        button.danger:hover {
+            background: #c82333;
+        }
+
+        .editor-wrapper {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            height: 700px;
+            border: 3px solid #007acc;
+            position: relative;
+        }
+
+        .editor-wrapper::before {
+            content: '📦 Your Lean Editor iframe - This is what you embed on your site';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #007acc;
+            color: white;
+            padding: 8px 12px;
+            font-size: 13px;
+            font-weight: 600;
+            z-index: 1000;
+            text-align: center;
+            border-bottom: 2px solid #005a9e;
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            margin-top: 36px;
+        }
+
+        .log {
+            margin-top: 20px;
+        }
+
+        .log-content {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .log-entry {
+            margin-bottom: 10px;
+            padding: 8px;
+            background: #252526;
+            border-left: 3px solid #007acc;
+            border-radius: 3px;
+        }
+
+        .log-entry.incoming {
+            border-left-color: #4ec9b0;
+        }
+
+        .log-entry.outgoing {
+            border-left-color: #ce9178;
+        }
+
+        .log-timestamp {
+            color: #858585;
+            font-size: 11px;
+        }
+
+        .log-type {
+            color: #4ec9b0;
+            font-weight: bold;
+            margin: 4px 0;
+        }
+
+        .log-data {
+            color: #d7ba7d;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .shortcuts {
+            font-size: 13px;
+        }
+
+        .shortcut-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .shortcut-key {
+            font-family: monospace;
+            background: #f5f5f5;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .info-box {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 15px;
+        }
+
+        .info-box.warning {
+            background: #fff3cd;
+            border-color: #ffd966;
+        }
+
+        .saved-solution {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 10px;
+            font-size: 13px;
+        }
+
+        .saved-solution pre {
+            background: white;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin-top: 8px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Lean Editor Testing Interface</h1>
+        <p class="subtitle">Test the Lean iframe integration with real problems</p>
+
+        <div class="layout">
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <!-- Problems Panel -->
+                <div class="panel">
+                    <h2>📝 Problems</h2>
+                    <div class="problem-list" id="problem-list">
+                        <!-- Problems will be added here -->
+                    </div>
+                </div>
+
+                <!-- Controls Panel -->
+                <div class="panel">
+                    <h2>🎮 Controls</h2>
+                    <div class="controls">
+                        <button onclick="requestSolution()">📥 Request Solution</button>
+                        <button onclick="clearEditor()" class="secondary">🗑️ Clear Editor</button>
+                        <button onclick="configureBackend()" class="secondary">⚙️ Configure Backend</button>
+                        <button onclick="clearLog()" class="danger">🧹 Clear Log</button>
+                    </div>
+                </div>
+
+                <!-- Shortcuts Panel -->
+                <div class="panel">
+                    <h2>⌨️ Keyboard Shortcuts</h2>
+                    <div class="shortcuts">
+                        <div class="shortcut-item">
+                            <span>Save solution</span>
+                            <span class="shortcut-key">Cmd/Ctrl + S</span>
+                        </div>
+                        <div class="shortcut-item">
+                            <span>Autocomplete</span>
+                            <span class="shortcut-key">Ctrl + Space</span>
+                        </div>
+                        <div class="shortcut-item">
+                            <span>Comment line</span>
+                            <span class="shortcut-key">Cmd/Ctrl + /</span>
+                        </div>
+                        <div class="shortcut-item">
+                            <span>Find</span>
+                            <span class="shortcut-key">Cmd/Ctrl + F</span>
+                        </div>
+                        <div class="shortcut-item">
+                            <span>Format document</span>
+                            <span class="shortcut-key">Shift + Alt + F</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lean Symbols Panel -->
+                <div class="panel">
+                    <h2>🔣 Official Lean 4 Symbols</h2>
+                    <div class="info-box">
+                        <strong>✅ Using official VSCode Lean4 abbreviations!</strong><br><br>
+                        <strong>Short forms (1-2 chars):</strong><br>
+                        \a → α   \b → β   \g → γ   \d → δ<br>
+                        \e → ε   \l → λ   \m → μ   \n → ¬<br>
+                        \r → →   \l → ←   \v → ∨   \i → ∩<br><br>
+                        <strong>Long forms:</strong><br>
+                        \alpha → α   \beta → β   \gamma → γ<br>
+                        \forall → ∀   \exists → ∃<br>
+                        \and → ∧   \or → ∨   \not → ¬<br><br>
+                        <strong>Numbers:</strong><br>
+                        \N → ℕ   \Z → ℤ   \Q → ℚ   \R → ℝ<br>
+                        \nat → ℕ   \int → ℤ   \real → ℝ<br><br>
+                        <strong>Compare:</strong><br>
+                        \le → ≤   \ge → ≥   \ne → ≠<br><br>
+                        <strong>Sets:</strong><br>
+                        \in → ∈   \notin → ∉   \sub → ⊂
+                    </div>
+                    <div class="info-box warning">
+                        <strong>💡 How to use:</strong><br>
+                        Just type - auto-converts instantly!<br>
+                        Example: <code>\a</code> → α, <code>\r</code> → →<br>
+                        Press <code>Ctrl+Space</code> after \ for full list<br>
+                        <strong>1800+ symbols available!</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="main-content">
+                <div class="editor-wrapper">
+                    <iframe id="lean-editor" src="http://localhost:3000"></iframe>
+                </div>
+
+                <!-- Log Panel -->
+                <div class="panel log">
+                    <h2>📡 Message Log</h2>
+                    <div class="log-content" id="log-content">
+                        <div class="log-entry">
+                            <div class="log-timestamp">Waiting for iframe to load...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Last Saved Solution -->
+                <div class="panel" id="solution-panel" style="display: none;">
+                    <h2>💾 Last Saved Solution</h2>
+                    <div id="saved-solution" class="saved-solution"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const iframe = document.getElementById('lean-editor');
+        const logContent = document.getElementById('log-content');
+        const solutionPanel = document.getElementById('solution-panel');
+        const savedSolutionDiv = document.getElementById('saved-solution');
+
+        let selectedProblemId = null;
+        let lastSolution = null;
+
+        // Problem definitions
+        const problems = [
+            {
+                id: 'prob-001',
+                title: 'Basic Addition',
+                description: 'Prove that 2 + 2 = 4',
+                initialCode: `-- Theorem: Basic addition
+theorem two_plus_two : 2 + 2 = 4 := by
+  -- Your proof here
+  sorry
+`
+            },
+            {
+                id: 'prob-002',
+                title: 'Symmetry of Equality',
+                description: 'Prove that equality is symmetric',
+                initialCode: `-- Theorem: Symmetry of equality
+theorem eq_symm {α : Type} (a b : α) (h : a = b) : b = a := by
+  -- Your proof here
+  sorry
+`
+            },
+            {
+                id: 'prob-003',
+                title: 'List Concatenation',
+                description: 'Prove that concatenating with empty list gives the original list',
+                initialCode: `-- Theorem: List concatenation with empty
+theorem list_append_nil {α : Type} (xs : List α) :
+  xs ++ [] = xs := by
+  -- Your proof here
+  sorry
+`
+            },
+            {
+                id: 'prob-004',
+                title: 'Natural Number Addition',
+                description: 'Prove commutativity of addition for natural numbers',
+                initialCode: `-- Theorem: Addition is commutative
+theorem add_comm (n m : Nat) : n + m = m + n := by
+  -- Your proof here
+  sorry
+`
+            },
+            {
+                id: 'prob-005',
+                title: 'Custom Example',
+                description: 'Write your own Lean code',
+                initialCode: `-- Write your own Lean theorem or definition
+example : True := by
+  trivial
+`
+            }
+        ];
+
+        // Initialize problem list
+        function initProblems() {
+            const problemList = document.getElementById('problem-list');
+            problems.forEach(problem => {
+                const card = document.createElement('div');
+                card.className = 'problem-card';
+                card.onclick = () => loadProblem(problem.id);
+                card.innerHTML = `
+                    <div class="problem-title">${problem.title}</div>
+                    <div class="problem-desc">${problem.description}</div>
+                `;
+                problemList.appendChild(card);
+            });
+        }
+
+        // Load a problem
+        function loadProblem(problemId) {
+            const problem = problems.find(p => p.id === problemId);
+            if (!problem) return;
+
+            selectedProblemId = problemId;
+
+            // Update UI
+            document.querySelectorAll('.problem-card').forEach((card, i) => {
+                card.classList.toggle('selected', problems[i].id === problemId);
+            });
+
+            // Send to iframe
+            sendMessage('LOAD_PROBLEM', problem);
+        }
+
+        // Request current solution
+        function requestSolution() {
+            sendMessage('REQUEST_SOLUTION', {});
+        }
+
+        // Clear the editor
+        function clearEditor() {
+            if (confirm('Clear editor and reset? This cannot be undone.')) {
+                sendMessage('CLEAR_EDITOR', {});
+                selectedProblemId = null;
+                document.querySelectorAll('.problem-card').forEach(card => {
+                    card.classList.remove('selected');
+                });
+            }
+        }
+
+        // Configure backend
+        function configureBackend() {
+            const config = {
+                submitToBackend: false, // Set to true if you have a backend
+                userId: 'test-user-123',
+                backendConfig: {
+                    endpoint: 'http://localhost:3001/api/submit',
+                    apiKey: 'test-api-key',
+                }
+            };
+            sendMessage('CONFIGURE', config);
+            alert('Backend configured! (Note: No actual backend in this demo)');
+        }
+
+        // Clear log
+        function clearLog() {
+            logContent.innerHTML = '<div class="log-entry"><div class="log-timestamp">Log cleared</div></div>';
+        }
+
+        // Send message to iframe
+        function sendMessage(type, data) {
+            iframe.contentWindow.postMessage({ type, data }, '*');
+            logMessage('outgoing', type, data);
+        }
+
+        // Listen for messages from iframe
+        window.addEventListener('message', (event) => {
+            const { type, data } = event.data;
+            logMessage('incoming', type, data);
+
+            switch (type) {
+                case 'IFRAME_READY':
+                    console.log('✅ Lean editor iframe is ready');
+                    // Auto-load first problem
+                    setTimeout(() => loadProblem('prob-001'), 500);
+                    break;
+                case 'PROBLEM_LOADED':
+                    console.log('✅ Problem loaded:', data.problemId);
+                    break;
+                case 'SOLUTION_SUBMITTED':
+                    console.log('✅ Solution submitted:', data);
+                    handleSolutionSubmitted(data);
+                    break;
+                case 'SOLUTION_DATA':
+                    console.log('✅ Solution data received:', data);
+                    handleSolutionReceived(data);
+                    break;
+            }
+        });
+
+        // Handle solution submission
+        function handleSolutionSubmitted(data) {
+            lastSolution = data;
+
+            // Show saved solution panel
+            solutionPanel.style.display = 'block';
+            savedSolutionDiv.innerHTML = `
+                <strong>Problem ID:</strong> ${data.problemId}<br>
+                <strong>Saved at:</strong> ${new Date(data.timestamp).toLocaleString()}<br>
+                <strong>Code length:</strong> ${data.code.length} characters
+                <pre>${escapeHtml(data.code)}</pre>
+            `;
+
+            // In a real app, you would send this to your backend:
+            // fetch('/api/solutions', {
+            //     method: 'POST',
+            //     headers: { 'Content-Type': 'application/json' },
+            //     body: JSON.stringify(data)
+            // });
+
+            alert(`✅ Solution saved!\n\nProblem: ${data.problemId}\nCode length: ${data.code.length} chars`);
+        }
+
+        // Handle solution data request
+        function handleSolutionReceived(data) {
+            console.log('Current solution:', data.code);
+            alert(`Current solution for ${data.problemId}:\n\n${data.code.substring(0, 200)}...`);
+        }
+
+        // Log messages to UI
+        function logMessage(direction, type, data) {
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${direction}`;
+
+            entry.innerHTML = `
+                <div class="log-timestamp">${timestamp} - ${direction.toUpperCase()}</div>
+                <div class="log-type">${type}</div>
+                <div class="log-data">${JSON.stringify(data, null, 2)}</div>
+            `;
+
+            logContent.appendChild(entry);
+            logContent.scrollTop = logContent.scrollHeight;
+        }
+
+        // Escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Initialize on load
+        initProblems();
+    </script>
+</body>
+</html>
