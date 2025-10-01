@@ -279,6 +279,18 @@
                     </div>
                 </div>
 
+                <!-- Jump & Diagnostics Panel -->
+                <div class="panel">
+                    <h2>🎯 Jump & Diagnostics</h2>
+                    <div class="controls">
+                        <button onclick="jumpToLine5()">🎯 Jump to Line 5</button>
+                        <button onclick="jumpToLine3Highlight()">✨ Jump to Line 3 (Highlight)</button>
+                        <button onclick="showSampleErrors()">🔴 Show Sample Errors</button>
+                        <button onclick="showMixedDiagnostics()">⚠️ Mixed Diagnostics</button>
+                        <button onclick="clearDiagnostics()">✅ Clear Diagnostics</button>
+                    </div>
+                </div>
+
                 <!-- Controls Panel -->
                 <div class="panel">
                     <h2>🎮 Controls</h2>
@@ -500,6 +512,95 @@ example : True := by
         // Clear log
         function clearLog() {
             logContent.innerHTML = '<div class="log-entry"><div class="log-timestamp">Log cleared</div></div>';
+        }
+
+        // Jump to line 5 (just cursor)
+        function jumpToLine5() {
+            sendMessage('JUMP_TO_POSITION', {
+                line: 5,
+                column: 1,
+                highlight: false
+            });
+        }
+
+        // Jump to line 3 with highlight
+        function jumpToLine3Highlight() {
+            sendMessage('JUMP_TO_POSITION', {
+                line: 3,
+                column: 3,
+                highlight: true
+            });
+        }
+
+        // Show sample errors
+        function showSampleErrors() {
+            sendMessage('SET_DIAGNOSTICS', {
+                diagnostics: [
+                    {
+                        line: 2,
+                        column: 10,
+                        type: 'error',
+                        message: 'Type mismatch: expected Nat but got String'
+                    },
+                    {
+                        line: 4,
+                        column: 5,
+                        type: 'error',
+                        message: 'Unknown identifier: this variable is not defined in scope'
+                    },
+                    {
+                        line: 6,
+                        column: 15,
+                        type: 'error',
+                        message: 'Failed to synthesize instance: cannot find typeclass instance'
+                    }
+                ]
+            });
+        }
+
+        // Show mixed diagnostics (errors + warnings)
+        function showMixedDiagnostics() {
+            sendMessage('SET_DIAGNOSTICS', {
+                diagnostics: [
+                    {
+                        line: 2,
+                        column: 12,
+                        type: 'error',
+                        message: 'Cannot prove goal: the proof is incomplete or incorrect'
+                    },
+                    {
+                        line: 3,
+                        column: 8,
+                        type: 'warning',
+                        message: 'Unused variable `x`: consider removing or using it'
+                    },
+                    {
+                        line: 5,
+                        column: 20,
+                        type: 'warning',
+                        message: 'Deprecated syntax: use new `by` tactic mode instead'
+                    },
+                    {
+                        line: 7,
+                        column: 3,
+                        type: 'error',
+                        message: 'Invalid pattern match: missing case for constructor'
+                    },
+                    {
+                        line: 8,
+                        column: 10,
+                        type: 'warning',
+                        message: 'This code is unreachable after `return` statement'
+                    }
+                ]
+            });
+        }
+
+        // Clear all diagnostics
+        function clearDiagnostics() {
+            sendMessage('SET_DIAGNOSTICS', {
+                diagnostics: []
+            });
         }
 
         // Send message to iframe

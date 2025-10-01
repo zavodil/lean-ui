@@ -22,6 +22,23 @@ interface EditorConfig {
   userId?: string;
 }
 
+interface JumpToPositionData {
+  line: number;
+  column: number;
+  highlight?: boolean;
+}
+
+interface DiagnosticItem {
+  line: number;
+  column: number;
+  type: 'error' | 'warning';
+  message: string;
+}
+
+interface SetDiagnosticsData {
+  diagnostics: DiagnosticItem[];
+}
+
 class LeanEditorApp {
   private editor: monaco.editor.IStandaloneCodeEditor | null = null;
   private currentProblem: ProblemData | null = null;
@@ -91,6 +108,12 @@ class LeanEditorApp {
           break;
         case 'CONFIGURE':
           this.handleConfigure(data as EditorConfig);
+          break;
+        case 'JUMP_TO_POSITION':
+          this.handleJumpToPosition(data as JumpToPositionData);
+          break;
+        case 'SET_DIAGNOSTICS':
+          this.handleSetDiagnostics(data as SetDiagnosticsData);
           break;
       }
     });
@@ -186,6 +209,58 @@ class LeanEditorApp {
       this.backendAPI = new BackendAPI(config.backendConfig);
       this.updateStatus('Backend configured', 'success');
     }
+  }
+
+  private handleJumpToPosition(data: JumpToPositionData) {
+    if (!this.editor) return;
+
+    const { line, column, highlight } = data;
+
+    // Set cursor position
+    this.editor.setPosition({ lineNumber: line, column });
+
+    // Scroll to position
+    this.editor.revealPositionInCenter({ lineNumber: line, column });
+
+    // Optionally highlight the line
+    if (highlight) {
+      const decorations = this.editor.createDecorationsCollection([{
+        range: new monaco.Range(line, 1, line, Number.MAX_SAFE_INTEGER),
+        options: {
+          isWholeLine: true,
+          className: 'highlighted-line',
+          glyphMarginClassName: 'highlighted-line-glyph'
+        }
+      }]);
+
+      // Remove highlight after 2 seconds
+      setTimeout(() => {
+        decorations.clear();
+      }, 2000);
+    }
+
+    // Focus editor
+    this.editor.focus();
+  }
+
+  private handleSetDiagnostics(data: SetDiagnosticsData) {
+    if (!this.editor) return;
+
+    const model = this.editor.getModel();
+    if (!model) return;
+
+    const markers: monaco.editor.IMarkerData[] = data.diagnostics.map(diag => ({
+      startLineNumber: diag.line,
+      startColumn: diag.column,
+      endLineNumber: diag.line,
+      endColumn: diag.column + 1,
+      message: diag.message,
+      severity: diag.type === 'error'
+        ? monaco.MarkerSeverity.Error
+        : monaco.MarkerSeverity.Warning,
+    }));
+
+    monaco.editor.setModelMarkers(model, 'lean-diagnostics', markers);
   }
 
   private notifyParent(type: string, data: any) {

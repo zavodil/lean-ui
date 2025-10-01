@@ -83,6 +83,21 @@
         .status.error {
             color: #dc3545;
         }
+
+        /* Highlighted line styles */
+        .highlighted-line {
+            background-color: rgba(255, 235, 59, 0.3);
+            animation: fadeOut 2s ease-in-out;
+        }
+
+        @keyframes fadeOut {
+            0% { background-color: rgba(255, 235, 59, 0.5); }
+            100% { background-color: rgba(255, 235, 59, 0); }
+        }
+
+        .highlighted-line-glyph {
+            background-color: #ffc107;
+        }
     </style>
 </head>
 <body>
