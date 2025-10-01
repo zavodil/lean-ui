@@ -11,8 +11,9 @@ const sortedAbbreviations = Object.keys(abbreviations).sort((a, b) => b.length -
 
 export function setupUnicodeInput(editor: monaco.editor.IStandaloneCodeEditor) {
   let isReplacing = false;
+  let lastTypedChar = '';
 
-  editor.onDidChangeModelContent(() => {
+  editor.onDidChangeModelContent((e) => {
     if (isReplacing) return;
 
     const model = editor.getModel();
@@ -21,13 +22,35 @@ export function setupUnicodeInput(editor: monaco.editor.IStandaloneCodeEditor) {
     const position = editor.getPosition();
     if (!position) return;
 
+    // Track last typed character
+    if (e.changes.length > 0) {
+      const change = e.changes[0];
+      lastTypedChar = change.text;
+    }
+
     const lineContent = model.getLineContent(position.lineNumber);
     const textBeforeCursor = lineContent.substring(0, position.column - 1);
 
+    // Check if we should trigger replacement
+    // Only replace if:
+    // 1. User typed a space, newline, or non-letter character (except backslash)
+    // 2. There's text after the cursor that's not a letter (end of abbreviation reached)
+    const charAfterCursor = lineContent[position.column - 1] || ' ';
+    const shouldReplace =
+      lastTypedChar === ' ' ||
+      lastTypedChar === '\n' ||
+      (lastTypedChar && !lastTypedChar.match(/[a-zA-Z\\]/)) ||
+      !charAfterCursor.match(/[a-zA-Z]/);
+
+    if (!shouldReplace) return;
+
+    // Remove trailing space/non-letter for matching
+    const textToMatch = textBeforeCursor.replace(/[^a-zA-Z\\]+$/, '');
+
     for (const abbr of sortedAbbreviations) {
-      if (textBeforeCursor.endsWith(abbr)) {
+      if (textToMatch.endsWith(abbr)) {
         const unicode = abbreviations[abbr];
-        const startColumn = position.column - abbr.length;
+        const startColumn = position.column - abbr.length - (textBeforeCursor.length - textToMatch.length);
         const endColumn = position.column;
 
         const range = new monaco.Range(
@@ -38,15 +61,18 @@ export function setupUnicodeInput(editor: monaco.editor.IStandaloneCodeEditor) {
         );
 
         isReplacing = true;
+
+        // Replace abbreviation + trigger character with unicode + trigger character
+        const triggerChar = textBeforeCursor.slice(textToMatch.length);
         editor.executeEdits('unicode-input', [{
           range,
-          text: unicode,
+          text: unicode + triggerChar,
           forceMoveMarkers: true,
         }]);
 
         editor.setPosition({
           lineNumber: position.lineNumber,
-          column: startColumn + unicode.length,
+          column: startColumn + unicode.length + triggerChar.length,
         });
 
         isReplacing = false;
