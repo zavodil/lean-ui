@@ -28,24 +28,21 @@ export function setupUnicodeInput(editor: monaco.editor.IStandaloneCodeEditor) {
       lastTypedChar = change.text;
     }
 
-    const lineContent = model.getLineContent(position.lineNumber);
-    const textBeforeCursor = lineContent.substring(0, position.column - 1);
-
-    // Check if we should trigger replacement
-    // Only replace if:
-    // 1. User typed a space, newline, or non-letter character (except backslash)
-    // 2. There's text after the cursor that's not a letter (end of abbreviation reached)
-    const charAfterCursor = lineContent[position.column - 1] || ' ';
+    // Only trigger replacement when user types non-letter character
+    // This allows typing full abbreviations like \langle without premature replacement
     const shouldReplace =
       lastTypedChar === ' ' ||
       lastTypedChar === '\n' ||
-      (lastTypedChar && !lastTypedChar.match(/[a-zA-Z\\]/)) ||
-      !charAfterCursor.match(/[a-zA-Z]/);
+      lastTypedChar === '\t' ||
+      (lastTypedChar && lastTypedChar.length === 1 && !lastTypedChar.match(/[a-zA-Z\\]/));
 
     if (!shouldReplace) return;
 
-    // Remove trailing space/non-letter for matching
-    const textToMatch = textBeforeCursor.replace(/[^a-zA-Z\\]+$/, '');
+    const lineContent = model.getLineContent(position.lineNumber);
+    const textBeforeCursor = lineContent.substring(0, position.column - 1);
+
+    // Remove trailing trigger character for matching
+    const textToMatch = textBeforeCursor.slice(0, -1);
 
     for (const abbr of sortedAbbreviations) {
       if (textToMatch.endsWith(abbr)) {
